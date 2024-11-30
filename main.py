@@ -1,74 +1,105 @@
-# 井字棋游戏
+import pygame
+import sys
+from pygame.locals import QUIT, MOUSEBUTTONDOWN
 
-# 第一阶段：创建空棋盘并打印
-def create_empty_board():
-    return [[" " for _ in range(3)] for _ in range(3)]
+# 初始化 Pygame
+pygame.init()
 
-def print_board(board):
-    print("---------")
-    for row in board:
-        print("|", " | ".join(row), "|")
-    print("---------")
+# 定义屏幕大小和颜色
+SCREEN_SIZE = 600
+CELL_SIZE = SCREEN_SIZE // 3
+LINE_COLOR = (0, 0, 0)
+BG_COLOR = (255, 255, 255)
+X_COLOR = (200, 0, 0)
+O_COLOR = (0, 0, 200)
 
-# 第二阶段：玩家输入并更新棋盘
-def player_input(board, player):
-    while True:
-        try:
-            move = int(input(f"玩家 {player}，请输入1到9之间的数字："))
-            if move < 1 or move > 9:
-                print("请输入1到9之间的数字！")
-                continue
+# 创建窗口
+screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+pygame.display.set_caption("第一届井字棋")
 
-            # 将1-9的数字转换为棋盘位置的行列索引
-            row, col = (move - 1) // 3, (move - 1) % 3
-            if board[row][col] != " ":
-                print("这个位置已经被占用！")
-                continue
+# 创建棋盘
+board = [[" " for _ in range(3)] for _ in range(3)]
+players = ["X", "O"]
+turn = 0
 
-            board[row][col] = player
-            break
-        except ValueError:
-            print("请输入有效的数字！")
+# 绘制棋盘
+def draw_board():
+    screen.fill(BG_COLOR)
+    # 绘制网格线
+    for i in range(1, 3):
+        pygame.draw.line(screen, LINE_COLOR, (i * CELL_SIZE, 0), (i * CELL_SIZE, SCREEN_SIZE), 5)
+        pygame.draw.line(screen, LINE_COLOR, (0, i * CELL_SIZE), (SCREEN_SIZE, i * CELL_SIZE), 5)
+    # 绘制棋子
+    for row in range(3):
+        for col in range(3):
+            if board[row][col] == "X":      
+                draw_x(row, col)
+            elif board[row][col] == "O":
+                draw_o(row, col)
 
-# 第三阶段：分析棋盘局势
-def check_win(board, player):
-    # 检查行、列和对角线是否有相同的符号
+def draw_x(row, col):
+    # 绘制 X
+    x1, y1 = col * CELL_SIZE + 50, row * CELL_SIZE + 50
+    x2, y2 = (col + 1) * CELL_SIZE - 50, (row + 1) * CELL_SIZE - 50
+    pygame.draw.line(screen, X_COLOR, (x1, y1), (x2, y2), 10)
+    pygame.draw.line(screen, X_COLOR, (x2, y1), (x1, y2), 10)
+
+def draw_o(row, col):
+    # 绘制 O
+    center = (col * CELL_SIZE + CELL_SIZE // 2, row * CELL_SIZE + CELL_SIZE // 2)
+    pygame.draw.circle(screen, O_COLOR, center, CELL_SIZE // 3, 10)
+
+# 检查胜利
+def check_win(player):
+    # 检查行、列、对角线
     for i in range(3):
-        if all([board[i][j] == player for j in range(3)]) or all([board[j][i] == player for j in range(3)]):
+        if all(board[i][j] == player for j in range(3)) or all(board[j][i] == player for j in range(3)):
             return True
-
-    if all([board[i][i] == player for i in range(3)]) or all([board[i][2-i] == player for i in range(3)]):
+    if all(board[i][i] == player for i in range(3)) or all(board[i][2 - i] == player for i in range(3)):
         return True
-
     return False
 
-def check_draw(board):
-    # 检查是否平局，棋盘没有空位并且没有赢家
-    return all([board[i][j] != " " for i in range(3) for j in range(3)])
+# 检查平局
+def check_draw():
+    return all(board[row][col] != " " for row in range(3) for col in range(3))
 
-# 第四阶段：开启双人对决
-def game():
-    board = create_empty_board()
-    players = ["X", "O"]
-    turn = 0
-    
+# 弹出胜利/平局提示
+def show_message(message):
+    pygame.display.set_caption(message)
+    pygame.time.wait(2000)
+    sys.exit()
+
+# 主游戏循环
+def game_loop():
+    global turn
     while True:
-        print_board(board)
-        current_player = players[turn % 2]
-        player_input(board, current_player)
+        draw_board()
+        pygame.display.flip()
 
-        if check_win(board, current_player):
-            print_board(board)
-            print(f"玩家 {current_player} 胜利！")
-            break
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == MOUSEBUTTONDOWN:
+                x, y = event.pos
+                row, col = y // CELL_SIZE, x // CELL_SIZE
 
-        if check_draw(board):
-            print_board(board)
-            print("游戏结束，平局！")
-            break
+                # 检查点击是否有效
+                if board[row][col] == " ":
+                    current_player = players[turn % 2]
+                    board[row][col] = current_player
 
-        turn += 1
+                    # 检查游戏状态
+                    if check_win(current_player):
+                        draw_board()
+                        pygame.display.flip()
+                        show_message(f"玩家 {current_player} 胜利！")
+                    elif check_draw():
+                        draw_board()
+                        pygame.display.flip()
+                        show_message("游戏平局！")
 
-# 游戏入口
+                    turn += 1
+
 if __name__ == "__main__":
-    game()
+    game_loop()
